@@ -133,7 +133,7 @@ _init_state()
 _render_sidebar()
 
 st.markdown("## 🔬 ARIA Research Assistant")
-st.caption("Search and synthesize scientific literature and clinical trials")
+st.caption("Agentic research assistant powered by Claude · Searches PubMed + ClinicalTrials.gov and synthesizes in real time")
 
 # Render chat history
 for m in st.session_state["messages"]:
@@ -185,4 +185,3 @@ if user_input:
                 f"Sorry — something went wrong: {e}. "
                 "Please try again or start a new research session."
             )
-            
