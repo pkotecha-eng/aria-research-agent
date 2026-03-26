@@ -12,7 +12,7 @@ st.set_page_config(
 
 
 def _init_state() -> None:
-    st.session_state.setdefault("messages", [])  # [{role: "user"|"assistant", content: str}]
+    st.session_state.setdefault("messages", [])
     st.session_state.setdefault("pending_user_message", None)
 
 
@@ -25,12 +25,12 @@ def _render_sidebar() -> None:
     with st.sidebar:
         st.markdown("### 🧬 ARIA")
         st.caption("AI Research Intelligence Assistant")
-        st.markdown("**Powered by Claude + PubMed**")
+        st.markdown("**Powered by Claude + PubMed + ClinicalTrials.gov**")
         st.divider()
 
         st.markdown("**Suggested research topics**")
         suggestions = [
-            "Velarixin pediatric neurological trials",
+            "Find recruiting trials for pediatric epilepsy",
             "eCOA patient compliance in clinical trials",
             "Adverse event reporting in Phase II trials",
             "Rare disease drug development challenges",
@@ -51,7 +51,7 @@ def _render_sidebar() -> None:
 def _render_empty_state_suggestions() -> None:
     st.markdown("**Try one of these:**")
     chips = [
-        "Velarixin pediatric neurological trials",
+        "Find recruiting trials for pediatric epilepsy",
         "eCOA patient compliance in clinical trials",
         "Adverse event reporting in Phase II trials",
         "Rare disease drug development challenges",
@@ -64,12 +64,19 @@ def _render_empty_state_suggestions() -> None:
                 st.rerun()
 
 
-def _display_sources(papers: list[dict]) -> None:
-    n = len(papers)
-    with st.expander(f"📄 Sources ({n} papers found)"):
-        if not papers:
-            st.write("No papers returned.")
-            return
+def _display_steps(steps: list[str]) -> None:
+    """Show tool call transparency — what ARIA did step by step."""
+    if not steps:
+        return
+    with st.expander("🔎 How ARIA researched this"):
+        for step in steps:
+            st.markdown(step)
+
+
+def _display_papers(papers: list[dict]) -> None:
+    if not papers:
+        return
+    with st.expander(f"📄 PubMed Sources ({len(papers)} paper(s) found)"):
         for p in papers:
             title = p.get("title") or "Untitled"
             authors = "; ".join(p.get("authors") or []) or "N/A"
@@ -81,7 +88,34 @@ def _display_sources(papers: list[dict]) -> None:
             st.markdown(f"**{title}**")
             st.caption(f"{authors}\n\n{journal_year}")
             if url:
-                st.markdown(f"[PubMed]({url})")
+                st.markdown(f"[PubMed ↗]({url})")
+            st.divider()
+
+
+def _display_trials(trials: list[dict]) -> None:
+    if not trials:
+        return
+    with st.expander(f"🏥 Clinical Trials ({len(trials)} trial(s) found)"):
+        for t in trials:
+            title = t.get("title") or "Untitled"
+            nct_id = t.get("nct_id") or "N/A"
+            status = t.get("status") or "N/A"
+            phase = t.get("phase") or "N/A"
+            sponsor = t.get("sponsor") or "N/A"
+            conditions = t.get("conditions") or "N/A"
+            min_age = t.get("min_age") or "N/A"
+            max_age = t.get("max_age") or "N/A"
+            locations = "; ".join(t.get("locations") or []) or "N/A"
+            url = t.get("url") or ""
+
+            st.markdown(f"**{title}**")
+            st.caption(
+                f"NCT: {nct_id} | Status: {status} | Phase: {phase}\n\n"
+                f"Sponsor: {sponsor} | Condition: {conditions}\n\n"
+                f"Age: {min_age} – {max_age} | Locations: {locations}"
+            )
+            if url:
+                st.markdown(f"[ClinicalTrials.gov ↗]({url})")
             st.divider()
 
 
@@ -95,12 +129,11 @@ def _anthropic_history_from_ui(ui_messages: list[dict]) -> list[dict]:
     return history
 
 
-
 _init_state()
 _render_sidebar()
 
 st.markdown("## 🔬 ARIA Research Assistant")
-st.caption("Search and synthesize scientific literature for clinical trial intelligence")
+st.caption("Search and synthesize scientific literature and clinical trials")
 
 # Render chat history
 for m in st.session_state["messages"]:
@@ -117,36 +150,39 @@ if pending and not user_input:
     st.session_state["pending_user_message"] = None
 
 if user_input:
-    # 1) Show user message
     st.session_state["messages"].append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # 2) Run agent
     with st.chat_message("assistant"):
         try:
-            with st.spinner("Searching PubMed and synthesizing research..."):
+            with st.spinner("Searching PubMed and ClinicalTrials.gov..."):
                 result = run_agent(
                     user_message=user_input,
-                    conversation_history=_anthropic_history_from_ui(st.session_state["messages"][:-1]),
+                    conversation_history=_anthropic_history_from_ui(
+                        st.session_state["messages"][:-1]
+                    ),
                     system_prompt=ARIA_SYSTEM_PROMPT,
                 )
 
             response_text = (result or {}).get("response") or ""
             used_tool = bool((result or {}).get("used_tool"))
             papers = (result or {}).get("papers") or []
+            trials = (result or {}).get("trials") or []
+            steps = (result or {}).get("steps") or []
 
-            # 4) Display response
             st.markdown(response_text if response_text else "I couldn't generate a response.")
 
-            # 5) Sources expander
             if used_tool:
-                _display_sources(papers)
+                _display_steps(steps)
+                _display_papers(papers)
+                _display_trials(trials)
 
-            # Add assistant response to history
             st.session_state["messages"].append({"role": "assistant", "content": response_text})
-        except Exception:
+
+        except Exception as e:
             st.error(
-                "Sorry—something went wrong while searching PubMed or generating the response. "
-                "Please try again in a moment (or start a new research session)."
+                f"Sorry — something went wrong: {e}. "
+                "Please try again or start a new research session."
             )
+            
