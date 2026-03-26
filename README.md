@@ -1,3 +1,23 @@
+---
+
+title: ARIA Research Agent
+
+emoji: 🔬
+
+colorFrom: blue
+
+colorTo: indigo
+
+sdk: streamlit
+
+sdk_version: "1.32.0"
+
+app_file: [app.py](http://app.py)
+
+pinned: true
+
+---
+
 # ARIA — AI Research Intelligence Assistant
 
 An agentic research assistant for clinical trial coordinators and life sciences professionals.
