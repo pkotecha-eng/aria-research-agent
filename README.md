@@ -3,17 +3,11 @@
 title: ARIA Research Agent
 
 emoji: 🔬
-
 colorFrom: blue
-
 colorTo: indigo
-
 sdk: streamlit
-
 sdk_version: "1.32.0"
-
 app_file: app.py
-
 pinned: true
 
 ---
@@ -27,33 +21,33 @@ An agentic research assistant for clinical trial coordinators and life sciences 
 ARIA uses Claude tool use to autonomously search across multiple data sources and synthesize findings:
 
 - **PubMed** — searches published scientific literature via NCBI E-utilities
-
 - **[ClinicalTrials.gov](http://ClinicalTrials.gov)** — searches active and recruiting clinical trials via the v2 API
-
 - **Multi-tool orchestration** — Claude decides which tools to call based on the query, and runs them in parallel
-
 - **Transparency layer** — shows exactly what ARIA searched and how many results were found before synthesizing
+
+## Response Quality Evaluation
+
+ARIA includes an LLM-as-judge eval layer that automatically scores each response:
+
+- **Relevance** (1-5) — did the retrieved sources match the question?
+- **Faithfulness** (1-5) — does the response stick to what was retrieved without hallucinating?
+
+Scores appear as a collapsible panel after each response, with reasoning for each dimension.
 
 ## Tech stack
 
 - Claude (claude-sonnet-4-5) with tool use
-
 - PubMed NCBI E-utilities API (no key required)
-
 - [ClinicalTrials.gov](http://ClinicalTrials.gov) API v2 (no key required)
-
 - Python + Streamlit
-
 - Parallel tool execution via `concurrent.futures`
+- LLM-as-judge eval layer via Claude Haiku (relevance + faithfulness scoring)
 
 ## Example queries
 
 - "Find recruiting trials for pediatric epilepsy"
-
 - "What is the latest research on velarixin and are there any active trials?"
-
 - "Adverse event reporting in Phase II trials"
-
 - "Rare disease drug development challenges"
 
 ## Setup
