@@ -2,6 +2,7 @@ import streamlit as st
 
 from agent import run_agent
 from prompts import ARIA_SYSTEM_PROMPT
+from eval import evaluate_response
 
 
 st.set_page_config(
@@ -119,6 +120,40 @@ def _display_trials(trials: list[dict]) -> None:
             st.divider()
 
 
+def _display_eval(question: str, response: str, papers: list[dict], trials: list[dict]) -> None:
+    """Display LLM-as-judge eval scores for the response."""
+    with st.spinner("Evaluating response quality..."):
+        scores = evaluate_response(question, response, papers, trials)
+
+    if scores.get("skipped"):
+        return
+
+    relevance = scores.get("relevance")
+    faithfulness = scores.get("faithfulness")
+    relevance_reason = scores.get("relevance_reason", "")
+    faithfulness_reason = scores.get("faithfulness_reason", "")
+
+    def score_color(s):
+        if s is None:
+            return "gray"
+        if s >= 4:
+            return "green"
+        if s >= 3:
+            return "orange"
+        return "red"
+
+    with st.expander("📊 Response Quality Evaluation"):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(f"**Relevance**")
+            st.markdown(f":{score_color(relevance)}[{'⭐' * (relevance or 0)} {relevance}/5]")
+            st.caption(relevance_reason)
+        with col2:
+            st.markdown(f"**Faithfulness**")
+            st.markdown(f":{score_color(faithfulness)}[{'⭐' * (faithfulness or 0)} {faithfulness}/5]")
+            st.caption(faithfulness_reason)
+
+
 def _anthropic_history_from_ui(ui_messages: list[dict]) -> list[dict]:
     history: list[dict] = []
     for m in ui_messages:
@@ -177,6 +212,12 @@ if user_input:
                 _display_steps(steps)
                 _display_papers(papers)
                 _display_trials(trials)
+                _display_eval(
+                    question=user_input,
+                    response=response_text,
+                    papers=papers,
+                    trials=trials,
+                )
 
             st.session_state["messages"].append({"role": "assistant", "content": response_text})
 
